@@ -1,5 +1,5 @@
 ---
-title: "HW3"
+title: "Homework 3"
 author: Na Yun Cho
 output: pdf_document
 ---
