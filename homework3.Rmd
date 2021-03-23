@@ -3,4 +3,123 @@ title: "Homework 3"
 author: Na Yun Cho
 output: pdf_document
 ---
+```{r}
+library(tidyverse) # data manipulation
+library(dplyr)
+library(ISLR) # for data
+library(janitor) # clean names 
+library(AppliedPredictiveModeling) # better plots
+library(caret) # modeling
+library(corrplot) # correlation plots
+library(pROC) # ROC curve
+library(MASS) # LDA
+```
+
+##(a)
+```{r}
+# Import data
+data(Weekly)
+weekly <-
+  Weekly %>% 
+  dplyr::select(-Today)
+
+# Feature plots
+
+theme1 <- transparentTheme(trans = .4)
+trellis.par.set(theme1)
+
+featurePlot(x = weekly[, 1:7], 
+            y = weekly$Direction,
+            scales = list(x = list(relation = "free"), 
+                          y = list(relation = "free")),
+            plot = "density", pch = "|", 
+            auto.key = list(columns = 2))
+
+# Correlation plot 
+corrplot(cor(weekly[,-8]), tl.srt = 45, order = 'hclust', type = 'upper')
+```
+The feature plots show that the distribution of the response classes (Up or Down) highly overlap for each feature. 
+The correlation plot shows that there is not much pairwise correlation between the features. 
+
+## (b)
+```{r}
+#training set
+train_df =
+  weekly %>%
+  filter(Year < 2009) %>% 
+  dplyr::select(-Year)
+
+#test set
+test_df = anti_join(weekly, train_df)
+
+contrasts(weekly$Direction)
+
+#perform logistic regression
+glm_train <- glm(Direction ~ ., 
+               data = train_df, 
+               family = binomial(link = "logit"))
+summary(glm_train)
+```
+It seems that the Lag1 predictor is statistically significant. 
+
+```{r}
+#compute the confusion matrix and overall fraction of correct predictions using the test data 
+test.pred.prob <- predict(glm_train, newdata = test_df,
+                           type = "response")
+
+test.pred <- rep("Down", length(test.pred.prob))
+test.pred[test.pred.prob>0.5] <- "Up"
+
+confusionMatrix(data = as.factor(test.pred),
+                reference = test_df$Direction,
+                positive = "Up")
+```
+The confusion matrix indicates that the fraction of correct classification is 0.4615. 
+Because the No Information Rate value (0.5865) is higher than the Accuracy value, it would be hard to conclude that the classification is entirely valid. The large P-value also indicates that the accuracy is not significantly better than the No Information Rate. 
+In addition, the Kappa Value that is close to 0 indicates that the classification performance is not good. 
+The sensitivity (0.2787) is low while the specificity (0.7209) is relatively high. 
+
+
+## (c)
+```{r}
+glm_train2 <- glm(Direction ~ Lag1 + Lag2,
+                 data = train_df, 
+                 family = binomial(link = "logit"))
+
+
+test.pred.prob <- predict(glm_train2, newdata = test_df,
+                           type = "response")
+test.pred <- rep("neg", length(test.pred.prob))
+test.pred[test.pred.prob>0.5] <- "pos"
+
+roc.glm <- roc(test_df$Direction, test.pred.prob)
+plot(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc.glm), col = 4, add = TRUE)
+```
+The AUC is 0.518. 
+
+# (d) 
+```{r}
+# LDA
+lda.fit <- lda(Direction~ Lag1 + Lag2,
+               data = train_df)
+lda.pred <- predict(lda.fit, newdata = test_df)
+roc.lda <- roc(test_df$Direction, lda.pred$posterior[,2])
+plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+
+# QDA
+qda.fit <- qda(Direction ~ Lag1 + Lag2,
+              data = train_df)
+qda.pred <- predict(qda.fit, newdata = test_df)
+roc.qda <- roc(test_df$Direction, qda.pred$posterior[,2])
+plot(roc.qda, legacy.axes = TRUE, print.auc = TRUE)
+               
+auc <- c(roc.lda$auc[1], roc.qda$auc[1])
+```
+The AUC from LDA is 0.55661 and the AUC from QDA is 0.5288. 
+
+## (e)
+```{r}
+
+```
 
