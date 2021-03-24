@@ -15,34 +15,38 @@ library(pROC) # ROC curve
 library(MASS) # LDA
 ```
 
-##(a)
+## (a)
 ```{r}
 # Import data
 data(Weekly)
-weekly <-
+weekly1 <-
   Weekly %>% 
-  dplyr::select(-Today)
+  dplyr::select(-Today, -Year)
 
 # Feature plots
 
 theme1 <- transparentTheme(trans = .4)
 trellis.par.set(theme1)
 
-featurePlot(x = weekly[, 1:7], 
-            y = weekly$Direction,
+featurePlot(x = weekly1[, 1:6], 
+            y = weekly1$Direction,
             scales = list(x = list(relation = "free"), 
                           y = list(relation = "free")),
             plot = "density", pch = "|", 
             auto.key = list(columns = 2))
 
 # Correlation plot 
-corrplot(cor(weekly[,-8]), tl.srt = 45, order = 'hclust', type = 'upper')
+corrplot(cor(weekly1[,-7]), tl.srt = 45, order = 'hclust', type = 'upper')
 ```
 The feature plots show that the distribution of the response classes (Up or Down) highly overlap for each feature. 
 The correlation plot shows that there is not much pairwise correlation between the features. 
 
 ## (b)
 ```{r}
+weekly <-
+  Weekly %>% 
+  dplyr::select(-Today)
+
 #training set
 train_df =
   weekly %>%
@@ -74,10 +78,12 @@ confusionMatrix(data = as.factor(test.pred),
                 reference = test_df$Direction,
                 positive = "Up")
 ```
-The confusion matrix indicates that the fraction of correct classification is 0.4615. 
-Because the No Information Rate value (0.5865) is higher than the Accuracy value, it would be hard to conclude that the classification is entirely valid. The large P-value also indicates that the accuracy is not significantly better than the No Information Rate. 
-In addition, the Kappa Value that is close to 0 indicates that the classification performance is not good. 
+The confusion matrix indicates that the fraction of correct predictions is 0.4615. 
+Because the No Information Rate value (0.5865) is higher than the Accuracy value, the classifier is not very meaningful. 
+The large P-value also indicates that the accuracy is not significantly better than the No Information Rate. 
+In addition, the Kappa Value that is close to 0 indicates that the probability of observed agreement is the same as the probability of agreement by chance. Thus, it indicates that the classification performance is not good. 
 The sensitivity (0.2787) is low while the specificity (0.7209) is relatively high. 
+Sensitivity measures the proportion of true positives that are correctly predicted and specificity measures the proportion of true negatives that are correctly predicted. 
 
 
 ## (c)
@@ -96,9 +102,9 @@ roc.glm <- roc(test_df$Direction, test.pred.prob)
 plot(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
 plot(smooth(roc.glm), col = 4, add = TRUE)
 ```
-The AUC is 0.518. 
+The AUC is 0.5558. 
 
-# (d) 
+## (d) 
 ```{r}
 # LDA
 lda.fit <- lda(Direction~ Lag1 + Lag2,
@@ -120,6 +126,7 @@ The AUC from LDA is 0.55661 and the AUC from QDA is 0.5288.
 
 ## (e)
 ```{r}
+set.seed(10000)
 ctrl <- trainControl(method = "repeatedcv",
                      repeats = 5, 
                      summaryFunction = twoClassSummary,
@@ -133,12 +140,14 @@ model.knn <- train(x = train_df[,1:2],
                    trControl = ctrl)
 
 model.knn$bestTune
-pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')
+pred_knn = predict(model.knn, newdata = test_df, type = 'prob')
 roc_knn <- roc(test_df$Direction, pred_knn[,2])
 plot.roc(roc_knn, legacy.axes = TRUE, print.auc = TRUE)
 ```
+The AUC is 0.531.
 
-Discuss Results: I have trained models using the data from 1990 to 2008 and predicted 'Direction' from 2009 to 2010. 
-I can see that LDA has the largest AUC, which indicates that it predicts the best.
-However, it is also apparent that the AUC for the 4 models are similar and slightly above 0.5, which indicates that the response 'Direction' is hard to be correctly classified with the given predictors. 
-In addition, the AUC for logistic regression, LDA, and QDA are stable since they do not involve tuning parameters. On the other hand, the KNN method is not stable. 
+Discussion of Results: 
+I have fit different types of models using the training data from 1990 to 2008 and plotted the ROC curves using the test data from 2009 to 2010. 
+From comparing all the AUC values, I can see that LDA generates the largest AUC among these models, which indicates that it shows the best classification performance. 
+However, it is also apparent that the AUC's for these four models are similar and slightly above 0.5, which indicates that it is hard to correctly classify the response 'Direction' with the given predictors. 
+In addition, the ROC for logistic regression, LDA, and QDA seem relatively stable since they do not involve tuning parameters. On the other hand, the ROC for the KNN method seems relatively less stable. 
