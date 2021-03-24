@@ -120,6 +120,21 @@ The AUC from LDA is 0.55661 and the AUC from QDA is 0.5288.
 
 ## (e)
 ```{r}
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 5, 
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
 
+model.knn <- train(x = train_df[,1:2],
+                   y = train_df$Direction,
+                   method = "knn",
+                   preProcess = c("center", "scale"), 
+                   tuneGrid = data.frame(k = seq(1, 499, by = 5)),  
+                   trControl = ctrl)
+
+model.knn$bestTune
+pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')
+roc_knn <- roc(test_df$Direction, pred_knn[,2])
+plot.roc(roc_knn, legacy.axes = TRUE, print.auc = TRUE)
 ```
 
