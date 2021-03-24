@@ -138,3 +138,7 @@ roc_knn <- roc(test_df$Direction, pred_knn[,2])
 plot.roc(roc_knn, legacy.axes = TRUE, print.auc = TRUE)
 ```
 
+Discuss Results: I have trained models using the data from 1990 to 2008 and predicted 'Direction' from 2009 to 2010. 
+I can see that LDA has the largest AUC, which indicates that it predicts the best.
+However, it is also apparent that the AUC for the 4 models are similar and slightly above 0.5, which indicates that the response 'Direction' is hard to be correctly classified with the given predictors. 
+In addition, the AUC for logistic regression, LDA, and QDA are stable since they do not involve tuning parameters. On the other hand, the KNN method is not stable. 
